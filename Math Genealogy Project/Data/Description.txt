@@ -1,0 +1,40 @@
+"scraping_results" contains the raw data, result from "Web_Scraping"
+
+
+
+"create_nx_graph.py" transforms the scrapped data in a directed nx graph, result:
+	"genealogy_nx_graph" located in "nx_data"
+
+
+
+
+"Adapt_data_for_classification" modifies the data in different formats,
+ in order to apply classification algorithms. Results:
+
+	"node_division" division of nodes in useless/train/val/test
+
+	"Probabilistic_Inference_data" folder with data for inference with our model
+		"encode_subj_2_idx" mapping from subject to index
+		"decode_idx_2_subj" inverse mapping
+		"data_graph" with the graph considered for inference
+
+	"Text_classification_data" folder with csv for text classification
+		"full_df" data from all nodes (with thesis)
+		"train_df"
+		"val_df"
+		"test_df"
+
+	"GNN_data" folder with pytorch geometric data
+		"encode_mathid_2_nodeid" mapping from math id to node id
+		"decode_nodeid_2_mathid" inverse mapping
+		"encode_subj_2_idx" mapping from subject to index
+		"decode_idx_2_subj" inverse mapping
+		"node_features_small" features X with dimention 1500
+		"node_features_tfidf" features X with all vocabulary 
+		"edge_index"  edge info of the graph
+		"y" labels of all nodes
+		"train_mask"
+		"val_mask"
+		"test_mask"
+		"useless_mask"
+				
