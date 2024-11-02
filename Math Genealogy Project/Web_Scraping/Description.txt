@@ -1,0 +1,20 @@
+Based on: https://github.com/j2kun/math-genealogy-scraper/tree/main
+With several modifications.
+
+Web scrapping to obtain data about the math genealogy project.
+
+
+Instructions to run it:
+	On the console, access the directory
+	python fetch.py
+	python make_edges.py
+
+
+It produces the outputs (located in Data/scraping_results):
+	data.json
+	scraping_date.txt
+	edges_graph.json
+
+
+
+
