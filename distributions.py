@@ -12,6 +12,8 @@ from scipy.stats import chisquare
 from scipy.optimize import minimize
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+import random
 
 
 '''
@@ -28,20 +30,20 @@ def frecuency_probabilities(sample, smoothing_parameter = 0.01, max_value = 1000
     Given a sample of non negative integers in [0, max_value]
     Returns frecuency probabilities using aditive smoothing
     '''
-    
-    # iniciar, con zeros, longuitud maxima 
+
+    # iniciar, con zeros, longuitud maxima
     proporciones = np.zeros(max_value + 1)
-    
+
     # Contar las ocurrencias de cada valor en la muestra
     for valor in sample:
         if 0 <= valor <= max_value:  # Asegurarse de que el valor esté en el rango
             proporciones[valor] += 1
-    
-    # sumar un suavizado 
+
+    # sumar un suavizado
     proporciones += smoothing_parameter
-    # Convertir las cuentas en proporciones 
+    # Convertir las cuentas en proporciones
     proporciones = proporciones / sum(proporciones)
-    
+
     return proporciones
 
 
@@ -160,7 +162,7 @@ def sumar_segun_celdas(vector, celdas):
     return vector_sumado
 
 
-# obtenre las ocurrencias 
+# obtenre las ocurrencias
 def get_ocurrencias_dominio(muestra, dominio):
     '''
     Dado una muestra, y su dominio,
@@ -175,15 +177,15 @@ def get_ocurrencias_dominio(muestra, dominio):
     # ver que se tengan todas las ocurrencias
     if sum(ocurrencias) == len(muestra):
         return ocurrencias
-    
+
     # si no es el caso, hay valroes en la muestra fuera del dominio
     # ver cuales son
     outliers = [x for x in muestra if x not in dominio]
-    
+
     # contar excepeciones
     outliers_pequeños = 0
     outliers_grandes = 0
-    
+
     # por cada outlier
     for x in outliers:
         # si es menor
@@ -191,39 +193,39 @@ def get_ocurrencias_dominio(muestra, dominio):
             outliers_pequeños = outliers_pequeños + 1
         elif x > max(dominio):
             outliers_grandes = outliers_grandes + 1
-            
+
     # decir
     if outliers_pequeños > 0:
         print(f"WARNING: {outliers_pequeños} outliers pequeños")
     if outliers_grandes > 0:
         print(f"WARNING: {outliers_grandes} outliers grandes")
-        
+
     # arreglar, poner en los extremos
     ocurrencias[0] = ocurrencias[0] + outliers_pequeños
     ocurrencias[-1] = ocurrencias[-1] + outliers_grandes
-    
+
     # comprobar que ahora si
     assert sum(ocurrencias) == len(muestra)
-    
+
     return ocurrencias
 
 
 
 # ver si los valores esperados en celdas son validos
 def valid_expected(valores_esperados):
-    
+
     # si hay uno menor a 1 no es valido
     if any([e<1 for e in valores_esperados]):
         return False
-    
+
     # ver cuantos son menos que 5
     menores_cinco = len([e for e in valores_esperados if e < 5])
     porcentaje_menor_a_cinco = menores_cinco/len(valores_esperados)
-    
+
     # si mas del 20% son menores a 5 no son validos
     if porcentaje_menor_a_cinco > 0.2:
-        return False 
-    
+        return False
+
     # si no pasa nada de esto
     return True
 
@@ -240,10 +242,10 @@ def functional_zero_truncated_pw(d, kappa, lamda):
     '''
     Funcional de la distribucion propuesta
     zero truncated power law
-    
+
     Es decir, la pmf no normalizada para valores positivos
     '''
-    
+
     # devolver para cuando d>0
     return np.power(d, -kappa) * np.exp(-d*lamda)
 
@@ -253,72 +255,72 @@ def log_functional_zero_truncated_pw(d, kappa, lamda):
     '''
     Logaritmo del funcional de la distribucion propuesta
     zero truncated power law
-    
+
     Es decir, la pmf no normalizada para valores positivos, en nogaritmo
     '''
-    
+
     # devolver para cuando d>0
     return -kappa*np.log(d) -d*lamda
 
 
-# pmf 
+# pmf
 def pmf_zero_truncated_pw(d, beta, kappa, lamda,
                           C = None, D_max = 1000):
     '''
     Funcion de probabilidad de la distribucion propuesta
     zero truncated power law
     Parametros: beta, kappa, lambda
-    
-    C es la constante normalizadora 
+
+    C es la constante normalizadora
     (funcional evaluado en valores mayores a 0)
-    
+
     D_max es el valor maximo considerado para d
     '''
 
     # poner las log probabilidades en un vector (si d es vector)
     resultado = np.zeros_like(d, float)
-    
+
     # si no se tiene la constante normalizadora, calcularla
     if C is None:
         C = 1 / (functional_zero_truncated_pw(np.arange(1, D_max), kappa, lamda)).sum()
-        
+
     # donde es 0 poner beta
     resultado[d==0] = beta
-    
+
     # donde d>0, poner el funcional normalizado
     resultado[d!=0] = (1 - beta) * C * functional_zero_truncated_pw(d[d!=0], kappa, lamda)
-    
+
     return resultado
 
 
 
-# log pmf 
+# log pmf
 def log_pmf_zero_truncated_pw(d, beta, kappa, lamda,
                               C = None, D_max = 1000):
     '''
     Logaritmo de la funcion de probabilidad de la distribucion propuesta
     zero truncated power law
     Parametros: beta, kappa, lambda
-    
-    C es la constante normalizadora 
+
+    C es la constante normalizadora
     (funcional evaluado en valores mayores a 0)
-    
+
     D_max es el valor maximo considerado para d
     '''
 
     # poner las log probabilidades en un vector (si d es vector)
     resultado = np.zeros_like(d, float)
-    
+
     # si no se tiene la constante normalizadora, calcularla
     if C is None:
         C = 1 / (functional_zero_truncated_pw(np.arange(1, D_max), kappa, lamda)).sum()
-        
+
     # donde es 0 poner log beta
     resultado[d==0] = np.log(beta)
-    
+
     # donde d>0, poner el funcional normalizado, todo en logaritmo
     resultado[d!=0] = np.log(1 - beta) + np.log(C) +  log_functional_zero_truncated_pw(d[d!=0], kappa, lamda)
-    
+
     return resultado
 
 
@@ -329,59 +331,59 @@ def estimate_zero_truncated_pw(sample, D_max = 1000):
     '''
     Given a sample, estimate the parameters of the proposed distribution
     zero truncated power law
-    
+
     Estimate: beta, kappa, lambda
     '''
     sample = np.array(sample)
-    
+
     # primero, beta se estima como el porcentaje de datos que son cero
     estimacion_beta = (sample == 0).sum()/len(sample)
-    
+
     # tomar valores positivos de la muestra para estimar lo que sigue
     positive_sample = sample[sample>0]
-    
+
     # minimizar el minus log likelihood para kappa y lambda
-    
+
     # definir el minus_log_likelihood, como funcion de los parametros
     def compute_minus_log_likelihood(kappa_lamda):
-    
+
         # separar parametros
         kappa = kappa_lamda[0]
         lamda = kappa_lamda[1]
-    
+
         # calcular la constante de estos parametros
         C = 1 / (functional_zero_truncated_pw(np.arange(1, D_max), kappa, lamda)).sum()
-        
+
         # tomar la log probabilidad de cada elemento en la muestra
         log_proba = log_pmf_zero_truncated_pw(d = positive_sample,
                                               beta = estimacion_beta,
                                               kappa = kappa,
-                                              lamda = lamda, 
+                                              lamda = lamda,
                                               C = C, D_max = D_max)
-        
+
         # devolver minus log likelihood
         return -log_proba.sum()
-    
-    
+
+
     # para estimar los parametros, poner un punto inicial
     punto_inicial = np.array([1, 0.5])
-    
+
     # limites de kappa y lamda
     bounds = [(1e-6, None), (1e-6, None)]
-    
+
     # estimar los parametros como problema de minimizacion
     resultado = minimize(compute_minus_log_likelihood,
                          punto_inicial,
                          method ='nelder-mead',
                          bounds = bounds)
-    
+
     # Obtener los resultados
     parametros_optimizados = resultado.x
-    
+
     # separar los parametros
     estimacion_kappa = parametros_optimizados[0]
     estimacion_lamda = parametros_optimizados[1]
-    
+
     return {'beta': estimacion_beta,
            'kappa': estimacion_kappa,
            'lamda': estimacion_lamda}
@@ -396,7 +398,7 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
     Chi square goodness of fit test with k_chi2 cells
     zero truncated power law
     '''
-    
+
     # ver el numero de datos
     n = len(sample)
     if ver:
@@ -432,7 +434,7 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
                                      kappa = estimacion_kappa,
                                      lamda = estimacion_lamda,
                                      C = C, D_max = D_max)
-        
+
     # comprobar que sea funcion de probabilidad en el dominio
     assert np.isclose(sum(pmf_estimada(np.arange(D_max))), 1)
 
@@ -471,35 +473,35 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
     if ver:
         print("Expecteed values in cells")
         print(esperado_celdas)
-        
-        
+
+
     # ver que sean validas las celdas
     while not valid_expected(esperado_celdas):
-        
+
         # bajar k en uno
         k_chi2 = k_chi2-1
         if ver:
             print("\nExpected values not valid")
             print(f"Reduce k to {k_chi2}")
-        
+
         # volver a calcular
         celdas = obtener_k_celdas_equiprobables(proba_h0_dominio, k_chi2)
-        
+
         # esperados
         proba_h0_celdas = sumar_segun_celdas(proba_h0_dominio, celdas)
         proba_h0_celdas[-1] = 1 - sum(proba_h0_celdas[:-1])
         assert comprobar_vector_probabilidad(proba_h0_celdas)
         esperado_celdas = np.array(proba_h0_celdas) * n
-        
-        
+
+
         if ver:
             print("\nNew Cells:")
             print(celdas)
             print("")
             print("New expecteed values in cells")
             print(esperado_celdas)
-        
-            
+
+
     # ----------------------------------------------------------
 
     # tomar la ocurrencia de cada elemento del dominio
@@ -510,12 +512,11 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
     if ver:
         print("Observed values in cells")
         print(observado_celdas)
-        
+
     # ----------------------------------------------------------
 
     # graficar si se quiere
     if ver:
-        fig, ax = plt.subplots(1, 3, figsize=(16, 5))
 
         # frecuencias
         frecuencias_por_valores = Counter(sample)
@@ -527,35 +528,48 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
         valores = valores[indices_ordenados]
         frecuencias = frecuencias[indices_ordenados]
 
-        # graficar
-        x_plot = np.arange(0, max(sample) + 1)
-        ax[0].bar(valores, frecuencias, label= "Oberved", color="blue")
-        ax[0].plot(x_plot, pmf_estimada(x_plot)*n, color="red", label="Expected under H0")
-        ax[0].set_title("Frequencies", fontsize = 18)
-        ax[0].legend()
-
-        # log scale
-        ax[1].plot(x_plot, pmf_estimada(x_plot) * n, label= "Expected under H0",
-                   color="red", linestyle="-")
-        ax[1].plot(x_plot, get_ocurrencias_dominio(sample, x_plot), label="Observed",
-                   color="blue", linestyle="", marker=".")
-        ax[1].set_xscale('log')
-        ax[1].set_yscale('log')
-        ax[1].set_title("Frequencies (log scale)", fontsize = 18)
-        ax[1].legend()
-
         # hacer los nombres de las celdas
         nombres_celdas = [str(c[0]) + "-" + str(c[1]) for c in celdas]
 
-        # graficar celdas
-        ax[2].bar(nombres_celdas, observado_celdas, label="Observed", color="blue")
-        ax[2].plot(nombres_celdas, esperado_celdas, label="Expected under H0", color="red", marker="o")
+        # graficar
+        sns.set(style="whitegrid", context="paper", font="serif")
+        fig, ax = plt.subplots(1, 3, figsize=(16, 5))
+
+        # === Panel 1: Frequencies ===
+        x_plot = np.arange(0, max(sample) + 1)
+        ax[0].bar(valores, frecuencias, label="Observed", color="blue", alpha=0.8)
+        ax[0].plot(x_plot, pmf_estimada(x_plot) * n, color="red", label="Expected under H₀", linewidth=2)
+        ax[0].set_title("Frequencies", fontsize=16, fontweight='bold')
+        ax[0].set_xlabel("Value", fontsize=14)
+        ax[0].set_ylabel("Count", fontsize=14)
+        ax[0].tick_params(axis='both', labelsize=12)
+        ax[0].legend(fontsize=11, title_fontsize=12)
+
+        # === Panel 2: Frequencies (log scale) ===
+        ax[1].plot(x_plot, pmf_estimada(x_plot) * n, color="red", linestyle="-", label="Expected under H₀", linewidth=2)
+        ax[1].plot(x_plot, get_ocurrencias_dominio(sample, x_plot), color="blue", linestyle="", marker=".", label="Observed")
+        ax[1].set_xscale('log')
+        ax[1].set_yscale('log')
+        ax[1].set_title("Frequencies (log scale)", fontsize=16, fontweight='bold')
+        ax[1].set_xlabel("Value (log scale)", fontsize=14)
+        ax[1].set_ylabel("Count (log scale)", fontsize=14)
+        ax[1].tick_params(axis='both', labelsize=12)
+        ax[1].legend(fontsize=11, title_fontsize=12)
+
+        # === Panel 3: Data in cells ===
+        ax[2].bar(nombres_celdas, observado_celdas, label="Observed", color="blue", alpha=0.8)
+        ax[2].plot(nombres_celdas, esperado_celdas, label="Expected under H₀", color="red", marker="o", linestyle="-", linewidth=2)
         ax[2].set_yscale('log')
-        ax[2].set_xlabel("Cells")
-        ax[2].set_title("Data in cells", fontsize = 18)
-        ax[2].tick_params(axis="x", rotation=90)
-        ax[2].legend()
-        
+        ax[2].set_xlabel("Cells", fontsize=14)
+        ax[2].set_ylabel("Count (log scale)", fontsize=14)
+        ax[2].set_title("Data in Cells", fontsize=16, fontweight='bold')
+        ax[2].tick_params(axis='x', rotation=90, labelsize=11)
+        ax[2].tick_params(axis='y', labelsize=12)
+        ax[2].legend(fontsize=10, title_fontsize=12)
+
+        plt.tight_layout()
+        # filename = f"plot_{random.randint(10000, 99999)}.jpg"
+        # plt.savefig(filename, bbox_inches="tight", dpi=300)
         plt.show()
 
     # ----------------------------------------------------------
@@ -574,7 +588,7 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
         print("\nChi square test \n")
         print(f"Statistic T = {T}")
         print(f"p-value = {pvalue}")
-        
+
         # rechazar H0
         if pvalue <= 0.05:
             print("The distribution is NOT zero truncated power law")
@@ -582,7 +596,7 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
         else:
             print("The distribution is zero truncated power law")
         print("-"*100)
-        
+
     return pvalue
 
 # ------------------------------------------------------------------
@@ -596,10 +610,10 @@ def functional_zero_discrete_lognormal(d, mu, sigma):
     '''
     Funcional de la distribucion propuesta
     zero discrete lognormal
-    
+
     Es decir, la pmf no normalizada para valores positivos
     '''
-    
+
     # devolver para cuando d>0
     return np.power((d * sigma * np.sqrt(2 * np.pi)), -1) * np.exp(-np.power(np.log(d) - mu, 2) / (2 * np.power(sigma, 2)))
 
@@ -609,72 +623,72 @@ def log_functional_zero_discrete_lognormal(d, mu, sigma):
     '''
     Logaritmo del funcional de la distribucion propuesta
     zero discrete lognormal
-    
+
     Es decir, la pmf no normalizada para valores positivos, en nogaritmo
     '''
-    
+
     # devolver para cuando d>0
     return -(np.log(d)  + np.log(sigma) + np.log(np.sqrt(2 * np.pi))) - np.power(np.log(d) - mu, 2) / (2 * np.power(sigma, 2))
 
 
-# pmf 
+# pmf
 def pmf_zero_discrete_lognormal(d, beta, mu, sigma,
                                 C = None, D_max = 1000):
     '''
     Funcion de probabilidad de la distribucion propuesta
     zero discrete lognormal
     Parametros: beta, mu, sigma
-    
-    C es la constante normalizadora 
+
+    C es la constante normalizadora
     (funcional evaluado en valores mayores a 0)
-    
+
     D_max es el valor maximo considerado para d
     '''
 
     # poner las log probabilidades en un vector (si d es vector)
     resultado = np.zeros_like(d, float)
-    
+
     # si no se tiene la constante normalizadora, calcularla
     if C is None:
         C = 1 / (functional_zero_discrete_lognormal(np.arange(1, D_max), mu, sigma)).sum()
-        
+
     # donde es 0 poner beta
     resultado[d==0] = beta
-    
+
     # donde d>0, poner el funcional normalizado
     resultado[d!=0] = (1 - beta) * C * functional_zero_discrete_lognormal(d[d!=0], mu, sigma)
-    
+
     return resultado
 
 
 
-# log pmf 
+# log pmf
 def log_pmf_zero_discrete_lognormal(d, beta, mu, sigma,
                                     C = None, D_max = 1000):
     '''
     Logaritmo de la funcion de probabilidad de la distribucion propuesta
     zero discrete lognormal
     Parametros: beta, mu, sigma
-    
-    C es la constante normalizadora 
+
+    C es la constante normalizadora
     (funcional evaluado en valores mayores a 0)
-    
+
     D_max es el valor maximo considerado para d
     '''
 
     # poner las log probabilidades en un vector (si d es vector)
     resultado = np.zeros_like(d, float)
-    
+
     # si no se tiene la constante normalizadora, calcularla
     if C is None:
         C = 1 / (functional_zero_discrete_lognormal(np.arange(1, D_max), mu, sigma)).sum()
-        
+
     # donde es 0 poner log beta
     resultado[d==0] = np.log(beta)
-    
+
     # donde d>0, poner el funcional normalizado, todo en logaritmo
     resultado[d!=0] = np.log(1 - beta) + np.log(C) +  log_functional_zero_discrete_lognormal(d[d!=0], mu, sigma)
-    
+
     return resultado
 
 
@@ -688,55 +702,55 @@ def estimate_zero_discrete_lognormal(sample, initial_point = [0.5, 0.5], D_max =
     Estimate: beta, mu, sigma
     '''
     sample = np.array(sample)
-    
+
     # primero, beta se estima como el porcentaje de datos que son cero
     estimacion_beta = (sample == 0).sum()/len(sample)
-    
+
     # tomar valores positivos de la muestra para estimar lo que sigue
     positive_sample = sample[sample>0]
-    
+
     # minimizar el minus log likelihood para kappa y lambda
-    
+
     # definir el minus_log_likelihood, como funcion de los parametros
     def compute_minus_log_likelihood(mu_sigma):
-    
+
         # separar parametros
         mu = mu_sigma[0]
         sigma = mu_sigma[1]
-    
+
         # calcular la constante de estos parametros
         C = 1 / (functional_zero_discrete_lognormal(np.arange(1, D_max), mu, sigma)).sum()
-        
+
         # tomar la log probabilidad de cada elemento en la muestra
         log_proba = log_pmf_zero_discrete_lognormal(d = positive_sample,
                                                     beta = estimacion_beta,
                                                     mu = mu,
-                                                    sigma = sigma, 
+                                                    sigma = sigma,
                                                     C = C, D_max = D_max)
-        
+
         # devolver minus log likelihood
         return -log_proba.sum()
-    
-    
+
+
     # para estimar los parametros, poner un punto inicial
     punto_inicial = initial_point
-    
+
     # limites de mu y sigma
     bounds = [(None, None), (1e-6, None)]
-    
+
     # estimar los parametros como problema de minimizacion
     resultado = minimize(compute_minus_log_likelihood,
                          punto_inicial,
                          method ='nelder-mead',
                          bounds = bounds)
-    
+
     # Obtener los resultados
     parametros_optimizados = resultado.x
-    
+
     # separar los parametros
     estimacion_mu = parametros_optimizados[0]
     estimacion_sigma = parametros_optimizados[1]
-    
+
     return {'beta': estimacion_beta,
            'mu': estimacion_mu,
            'sigma': estimacion_sigma}
@@ -751,7 +765,7 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
     Chi square goodness of fit test with k_chi2 cells
     zero discrete lognormal
     '''
-    
+
     # ver el numero de datos
     n = len(sample)
     if ver:
@@ -787,7 +801,7 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
                                            mu = estimacion_mu,
                                            sigma = estimacion_sigma,
                                            C = C, D_max = D_max)
-        
+
     # comprobar que sea funcion de probabilidad en el dominio
     assert np.isclose(sum(pmf_estimada(np.arange(D_max))), 1)
 
@@ -826,35 +840,35 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
     if ver:
         print("Expecteed values in cells")
         print(esperado_celdas)
-        
-        
+
+
     # ver que sean validas las celdas
     while not valid_expected(esperado_celdas):
-        
+
         # bajar k en uno
         k_chi2 = k_chi2-1
         if ver:
             print("\nExpected values not valid")
             print(f"Reduce k to {k_chi2}")
-        
+
         # volver a calcular
         celdas = obtener_k_celdas_equiprobables(proba_h0_dominio, k_chi2)
-        
+
         # esperados
         proba_h0_celdas = sumar_segun_celdas(proba_h0_dominio, celdas)
         proba_h0_celdas[-1] = 1 - sum(proba_h0_celdas[:-1])
         assert comprobar_vector_probabilidad(proba_h0_celdas)
         esperado_celdas = np.array(proba_h0_celdas) * n
-        
-        
+
+
         if ver:
             print("\nNew Cells:")
             print(celdas)
             print("")
             print("New expecteed values in cells")
             print(esperado_celdas)
-        
-            
+
+
     # ----------------------------------------------------------
 
     # tomar la ocurrencia de cada elemento del dominio
@@ -865,12 +879,11 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
     if ver:
         print("Observed values in cells")
         print(observado_celdas)
-        
+
     # ----------------------------------------------------------
 
     # graficar si se quiere
     if ver:
-        fig, ax = plt.subplots(1, 3, figsize=(16, 5))
 
         # frecuencias
         frecuencias_por_valores = Counter(sample)
@@ -882,35 +895,48 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
         valores = valores[indices_ordenados]
         frecuencias = frecuencias[indices_ordenados]
 
-        # graficar
-        x_plot = np.arange(0, max(sample) + 1)
-        ax[0].bar(valores, frecuencias, label= "Oberved", color="blue")
-        ax[0].plot(x_plot, pmf_estimada(x_plot)*n, color="red", label="Expected under H0")
-        ax[0].set_title("Frequencies", fontsize = 18)
-        ax[0].legend()
-
-        # log scale
-        ax[1].plot(x_plot, pmf_estimada(x_plot) * n, label= "Expected under H0",
-                   color="red", linestyle="-")
-        ax[1].plot(x_plot, get_ocurrencias_dominio(sample, x_plot), label="Observed",
-                   color="blue", linestyle="", marker=".")
-        ax[1].set_xscale('log')
-        ax[1].set_yscale('log')
-        ax[1].set_title("Frequencies (log scale)", fontsize = 18)
-        ax[1].legend()
-
         # hacer los nombres de las celdas
         nombres_celdas = [str(c[0]) + "-" + str(c[1]) for c in celdas]
 
-        # graficar celdas
-        ax[2].bar(nombres_celdas, observado_celdas, label="Observed", color="blue")
-        ax[2].plot(nombres_celdas, esperado_celdas, label="Expected under H0", color="red", marker="o")
+        # graficar
+        sns.set(style="whitegrid", context="paper", font="serif")
+        fig, ax = plt.subplots(1, 3, figsize=(16, 5))
+
+        # === Panel 1: Frequencies ===
+        x_plot = np.arange(0, max(sample) + 1)
+        ax[0].bar(valores, frecuencias, label="Observed", color="blue", alpha=0.8)
+        ax[0].plot(x_plot, pmf_estimada(x_plot) * n, color="red", label="Expected under H₀", linewidth=2)
+        ax[0].set_title("Frequencies", fontsize=16, fontweight='bold')
+        ax[0].set_xlabel("Value", fontsize=14)
+        ax[0].set_ylabel("Count", fontsize=14)
+        ax[0].tick_params(axis='both', labelsize=12)
+        ax[0].legend(fontsize=11, title_fontsize=12)
+
+        # === Panel 2: Frequencies (log scale) ===
+        ax[1].plot(x_plot, pmf_estimada(x_plot) * n, color="red", linestyle="-", label="Expected under H₀", linewidth=2)
+        ax[1].plot(x_plot, get_ocurrencias_dominio(sample, x_plot), color="blue", linestyle="", marker=".", label="Observed")
+        ax[1].set_xscale('log')
+        ax[1].set_yscale('log')
+        ax[1].set_title("Frequencies (log scale)", fontsize=16, fontweight='bold')
+        ax[1].set_xlabel("Value (log scale)", fontsize=14)
+        ax[1].set_ylabel("Count (log scale)", fontsize=14)
+        ax[1].tick_params(axis='both', labelsize=12)
+        ax[1].legend(fontsize=11, title_fontsize=12)
+
+        # === Panel 3: Data in cells ===
+        ax[2].bar(nombres_celdas, observado_celdas, label="Observed", color="blue", alpha=0.8)
+        ax[2].plot(nombres_celdas, esperado_celdas, label="Expected under H₀", color="red", marker="o", linestyle="-", linewidth=2)
         ax[2].set_yscale('log')
-        ax[2].set_xlabel("Cells")
-        ax[2].set_title("Data in cells", fontsize = 18)
-        ax[2].tick_params(axis="x", rotation=90)
-        ax[2].legend()
-        
+        ax[2].set_xlabel("Cells", fontsize=14)
+        ax[2].set_ylabel("Count (log scale)", fontsize=14)
+        ax[2].set_title("Data in Cells", fontsize=16, fontweight='bold')
+        ax[2].tick_params(axis='x', rotation=90, labelsize=11)
+        ax[2].tick_params(axis='y', labelsize=12)
+        ax[2].legend(fontsize=11, title_fontsize=12)
+
+        plt.tight_layout()
+        # filename = f"plot_{random.randint(10000, 99999)}.jpg"
+        # plt.savefig(filename, bbox_inches="tight", dpi=300)
         plt.show()
 
 
@@ -930,7 +956,7 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
         print("\nChi square test \n")
         print(f"Statistic T = {T}")
         print(f"p-value = {pvalue}")
-        
+
         # rechazar H0
         if pvalue <= 0.05:
             print("The distribution is NOT zero discrete lognormal")
@@ -938,7 +964,7 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
         else:
             print("The distribution is zero discrete lognormal")
         print("-"*100)
-        
+
     return pvalue
 
 
@@ -946,19 +972,3 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
 # -----------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

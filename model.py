@@ -21,7 +21,7 @@ import random
 from collections import Counter
 import distributions
 from tqdm import tqdm
-
+from scipy.special import softmax
 
 
 class probabilistic_graph_model:
@@ -79,7 +79,7 @@ class probabilistic_graph_model:
         self.test_nodes = test_nodes
         self.useless_nodes = useless_nodes
         self.set_train_nodes = set(train_nodes)
-        self.set_no_train_nodes = np.array(list(set(self.graph.nodes()) - self.set_train_nodes))
+        self.set_no_train_nodes = set(self.graph.nodes()) - self.set_train_nodes
         self.list_no_train_nodes = list(self.set_no_train_nodes)
 
         # assert that labels are indices 0,...,K-1
@@ -992,13 +992,12 @@ class probabilistic_graph_model:
     # toma un nodo del grafo que no sea train
     # y una iteracion de la inferencia
     # infiere el subject usando la informacion de iteracion pasada
-    def inferir_label_nodo_iteracion(self, nodo, iteracion, metodo):
+    def inferir_label_nodo_iteracion(self, nodo, iteracion, metodo, return_scores = False):
         '''
         Argumentos:
             nodo        - nodo del grafo que no sea de entrenamiento
             iteracion   - int  -  numero de iteracion en la que se hace inferencia
             metodo      - metodo usado para la inferencia, puede ser mle o map
-            parametros  - parametros del modelo
 
         Se usan las labels producto de la iteracion pasada para nodos no train
         Para nodos en train se usa su label real, pues se conoce.
@@ -1051,6 +1050,11 @@ class probabilistic_graph_model:
 
         # poner esta prediccion como argumento de la iteracion actual
         self.graph.nodes[nodo][f"prediccion_{metodo}_{int(iteracion)}"] = prediccion_y
+
+        # devolver, si se quiere
+        if return_scores:
+            return scores_minimizar
+
 
     # --------------------------------------------------------------------
 
@@ -1494,7 +1498,7 @@ class probabilistic_graph_model:
 
     # Example of prediction
 
-    def see_example_prediction(self, node_v, iteration, method, num_top_labels = 3):
+    def see_example_prediction(self, node_v, iteration, method, num_top_labels = 3, return_12_diff = False, print_info = True):
         '''
         See the proces behind the prediction of a single node
         Interpretability of predictions
@@ -1505,14 +1509,20 @@ class probabilistic_graph_model:
         Show the best num_top_labels labels for this node
         '''
 
-        print(f"Prediction of node {node_v} in iteration {iteration} using {method}\n")
         division_v = self.graph.nodes[node_v][self.name_division]
-        print(f"{division_v} node")
+
+        if print_info:
+            print(f"Prediction of node {node_v} in iteration {iteration} using {method}\n")
+            print(f"{division_v} node")
+
         if  division_v != "useless":
             true_label = self.graph.nodes[node_v][self.name_label_y]
-            print(f"True label: {true_label} ({self.decode_label[true_label]})")
-        print("")
-        print("-"*50)
+            if print_info:
+                print(f"True label: {true_label} ({self.decode_label[true_label]})")
+
+        if print_info:
+            print("")
+            print("-"*50)
 
         # info of the node
         x_v = self.graph.nodes[node_v][self.name_atributes_x]
@@ -1522,98 +1532,110 @@ class probabilistic_graph_model:
         succcesors_v = [v for v in self.graph.successors(node_v)]
 
         # informar
-        print(f"Information of node {node_v}:")
-        print(f"Text atributes: {x_v}")
-        print(f"\nIn Degree: {d_in}")
-        if d_in > 0:
-            print(f"Predecesors: {predecessors_v}")
-            # print every predecesor
-            for u in predecessors_v:
-                # si es train se sabe el label
-                if u in self.train_nodes:
-                    print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
-                # no traini node, no se sabe el label
-                else:
-                    print(f"\t{u} - not training node. Unknown label")
-        print(f"Out Degree: {d_out}")
-        if d_out > 0:
-            print(f"Successors: {succcesors_v}")
-            # print every successor
-            for u in succcesors_v:
-                # si es train se sabe el label
-                if u in self.train_nodes:
-                    print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
-                # no traini node, no se sabe el label
-                else:
-                    print(f"\t{u} - not training node. Unknown label")
+        if print_info:
+            print(f"Information of node {node_v}:")
+            print(f"Text atributes: {x_v}")
+            print(f"\nIn Degree: {d_in}")
+            if d_in > 0:
+                print(f"Predecesors: {predecessors_v}")
+                # print every predecesor
+                for u in predecessors_v:
+                    # si es train se sabe el label
+                    if u in self.train_nodes:
+                        print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
+                    # no traini node, no se sabe el label
+                    else:
+                        print(f"\t{u} - not training node. Unknown label")
+            print(f"Out Degree: {d_out}")
+            if d_out > 0:
+                print(f"Successors: {succcesors_v}")
+                # print every successor
+                for u in succcesors_v:
+                    # si es train se sabe el label
+                    if u in self.train_nodes:
+                        print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
+                    # no traini node, no se sabe el label
+                    else:
+                        print(f"\t{u} - not training node. Unknown label")
 
 
 
         # la iteracion ayuda a nodos para los que no se sabe la label
-        print("-"*50)
-        print(f"\nPredict label of {node_v} in iteration {iteration}")
-        print(f"Use {method} predictions on iteration {iteration - 1} for the neihboors of {node_v}\n")
+        if print_info:
+            print("-"*50)
+            print(f"\nPredict label of {node_v} in iteration {iteration}")
+            print(f"Use {method} predictions on iteration {iteration - 1} for the neihboors of {node_v}\n")
 
 
         # volver a iterar en predecesors y successors, con labels de iteracion
-        if d_in > 0:
-            print(f"Predecesors: {predecessors_v}")
-            # print every predecesor
-            for u in predecessors_v:
-                # si es train se sabe el label
-                if u in self.train_nodes:
-                    print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
-                # no training node, poner la prediccion pasada
-                else:
-                    print(f"\t{u} - not training node. {method} prediction on iteration {iteration - 1}: {self.tomar_label_nodo(u, iteracion_prediccion = iteration - 1, metodo = method)}")
-        if d_out > 0:
-            print(f"Successors: {succcesors_v}")
-            # print every predecesor
-            for u in succcesors_v:
-                # si es train se sabe el label
-                if u in self.train_nodes:
-                    print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
-                # no training node, poner la prediccion pasada
-                else:
-                    print(f"\t{u} - not training node. {method} prediction on iteration {iteration - 1}: {self.tomar_label_nodo(u, iteracion_prediccion = iteration - 1, metodo = method)}")
+        if print_info:
+            if d_in > 0:
+                print(f"Predecesors: {predecessors_v}")
+                # print every predecesor
+                for u in predecessors_v:
+                    # si es train se sabe el label
+                    if u in self.train_nodes:
+                        print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
+                    # no training node, poner la prediccion pasada
+                    else:
+                        print(f"\t{u} - not training node. {method} prediction on iteration {iteration - 1}: {self.tomar_label_nodo(u, iteracion_prediccion = iteration - 1, metodo = method)}")
+            if d_out > 0:
+                print(f"Successors: {succcesors_v}")
+                # print every predecesor
+                for u in succcesors_v:
+                    # si es train se sabe el label
+                    if u in self.train_nodes:
+                        print(f"\t{u} - training node. Known label: {self.graph.nodes[u][self.name_label_y]}")
+                    # no training node, poner la prediccion pasada
+                    else:
+                        print(f"\t{u} - not training node. {method} prediction on iteration {iteration - 1}: {self.tomar_label_nodo(u, iteracion_prediccion = iteration - 1, metodo = method)}")
 
 
         # tomar los vectores
         vector_p_ascendencia = self.get_vector_p(node_v, iteration, method)
         vector_s_descendencia = self.get_vector_s(node_v, iteration, method)
         # informar
-        print("\nVector p_v:")
-        print(vector_p_ascendencia)
-        print("Vector s_v:")
-        print(vector_s_descendencia)
+        if print_info:
+            print("\nVector p_v:")
+            print(vector_p_ascendencia)
+            print("Vector s_v:")
+            print(vector_s_descendencia)
+            print("")
+            print("-"*50)
 
         # ya se tiene la info para hacer la inferencia
-        print("")
-        print("-"*50)
         #print("With this information we can make inference")
-
 
         # iniciar los scores a minimizar en 0
         # guardar un score por cada subject
         scores_minimizar = np.zeros(self.K)
+
+        # ir guardando los scores para cada componente
+        full_scores = {}
 
         # tomar los valores del texto, ya se tienen
         atribute_discr = -self.graph.nodes[node_v]['log_omega_evaluated']
         #print("\nAtribute discrepancy:")
         #print(atribute_discr)
         scores_minimizar += atribute_discr
+        # agregar a todos los scores
+        full_scores["Attributes"] = atribute_discr
 
         # Predecessor Count Discrepancy
         pred_count_discr = -self.parameters["matrix_log_psi"][:, min(d_in, self.config["D_in_max"])]
         #print("\nPredecessor Count Discrepancy:")
         #print(pred_count_discr)
         scores_minimizar += pred_count_discr
+        # agregar a todos los scores
+        full_scores["Pred_count"] = pred_count_discr
 
         # Successor Count Discrepancy
         succ_count_discr =  -self.parameters["matrix_log_phi"][:, min(d_out, self.config["D_out_max"])]
         #print("\nSuccessor Count Discrepancy:")
         #print(succ_count_discr)
         scores_minimizar += succ_count_discr
+        # agregar a todos los scores
+        full_scores["Succ_count"] = succ_count_discr
 
         # label Predecessors Discrepancy
         pred_label_discr = -self.log_multinomial_pmf(vector_p_ascendencia,
@@ -1622,6 +1644,8 @@ class probabilistic_graph_model:
         #print("\nLabel Predecessors Discrepancy:")
         #print(pred_label_discr)
         scores_minimizar += pred_label_discr
+        # agregar a todos los scores
+        full_scores["Pred_label"] = pred_label_discr
 
 
         # Label Successors Discrepancy
@@ -1631,6 +1655,8 @@ class probabilistic_graph_model:
         #print("\nLabel Successors Discrepancy:")
         #print(succ_label_discr)
         scores_minimizar += succ_label_discr
+        # agregar a todos los scores
+        full_scores["Succ_label"] = succ_label_discr
 
 
         # añadir las priors (solo MAP)
@@ -1639,6 +1665,8 @@ class probabilistic_graph_model:
             #print("\nPrior Discrepancy:")
             #print(prior_discr)
             scores_minimizar += prior_discr
+            # agregar a todos los scores
+            full_scores["Prior"] = prior_discr
 
 
         # sumar todas
@@ -1648,27 +1676,108 @@ class probabilistic_graph_model:
 
         # ver los labels con menor discrepancy
         top_labels = np.argsort(scores_minimizar)[:num_top_labels]
-
-        print(f"\nTop {num_top_labels} labels with lowest discrepancy")
-        print(top_labels)
+        if print_info:
+            print(f"\nTop {num_top_labels} labels with lowest discrepancy")
+            print(top_labels)
 
         # por cada una de las buenas labels
-        for label_buena in top_labels:
-            print(f"\nLabel: {label_buena} ({self.decode_label[label_buena]})")
-            print(f"\tAtribute discrepancy: {atribute_discr[label_buena]}")
-            print(f"\tPredecessor Count Discrepancy: {pred_count_discr[label_buena]}")
-            print(f"\tSuccessor Count Discrepancy: {succ_count_discr[label_buena]}")
-            print(f"\tLabel Predecessors Discrepancy: {pred_label_discr[label_buena]}")
-            print(f"\tLabel Successors Discrepancy: {succ_label_discr[label_buena]}")
-            if method.lower() == "map":
-                print(f"\tPrior Discrepancy: {prior_discr[label_buena]}")
-            print(f"\tTotal discrepancy: {scores_minimizar[label_buena]}")
+        if print_info:
+            for label_buena in top_labels:
+                print(f"\nLabel: {label_buena} ({self.decode_label[label_buena]})")
+                print(f"\tAtribute discrepancy: {atribute_discr[label_buena]}")
+                print(f"\tPredecessor Count Discrepancy: {pred_count_discr[label_buena]}")
+                print(f"\tSuccessor Count Discrepancy: {succ_count_discr[label_buena]}")
+                print(f"\tLabel Predecessors Discrepancy: {pred_label_discr[label_buena]}")
+                print(f"\tLabel Successors Discrepancy: {succ_label_discr[label_buena]}")
+                if method.lower() == "map":
+                    print(f"\tPrior Discrepancy: {prior_discr[label_buena]}")
+                print(f"\tTotal discrepancy: {scores_minimizar[label_buena]}")
+            print("-"*30)
 
-        print("-"*30)
+        # diferencias entre la segunda mejor y la mejor
+        best_1 = top_labels[0]
+        best_2 = top_labels[1]
+        diff_12  = {}
+        # por cada componente, poner la diferencia
+        for component, scores in full_scores.items():
+            diff_12[component] = scores[best_2] - scores[best_1]
+        # mostrar
+        if print_info:
+            print("Diferences between the second best and best label: ")
+            for component, diff in diff_12.items():
+                print(f"{component:<10}: {diff:.4f}")
 
         # prediccion final
-        final_prediction = self.graph.nodes[node_v][f"prediccion_{method}_{int(iteration)}"]
-        print(f"\nFinal prediction: {final_prediction} ({self.decode_label[final_prediction]})")
+        if print_info:
+            print("-"*30)
+            final_prediction = self.graph.nodes[node_v][f"prediccion_{method}_{int(iteration)}"]
+            print(f"\nFinal prediction: {final_prediction} ({self.decode_label[final_prediction]})\n")
+
+        # Confidence Scores for MAP
+        if method.lower() == "map":
+            conf_scores = self.map_node_confidence_prediction(node_v, iteration)
+            if print_info:
+                print("-"*70)
+                print("Confidence (based on posterior)\n")
+                print(f"- Probability: {conf_scores['Probability']:.4f}")
+                print(f"- Entropy Confidence: {conf_scores['Entropy_Confidence']:.4f}\n")
+                # plot posterior
+                posterior = self.posterior_dist_label_nodo_iteracion(node_v, iteration)
+                fig, ax = plt.subplots(figsize = (10, 3))
+                ax.bar(np.arange(len(posterior)), posterior)
+                ax.set_title("Posterior")
+                plt.show()
+
+        # return the differences, maybe
+        if return_12_diff:
+            return diff_12
+
+    # -------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
+    # Confidence in MAP predictions
+
+    def posterior_dist_label_nodo_iteracion(self, nodo, iteracion):
+        """
+        Devuelve la posterior distribution de la etiqueta de un nodo
+        al hacer prediccion con MAP, en la iteracion especificada
+
+        Argumentos:
+            nodo        - nodo del grafo que no sea de entrenamiento
+            iteracion   - int  -  numero de iteracion en la que se calcula la posterior
+        """
+
+        # obtener los scores asociados con la iteracion
+        scores = self.inferir_label_nodo_iteracion(nodo, iteracion, metodo = "map", return_scores = True)
+        # convertir los scores (neg log probabilidad no normalizados) en probabilidades
+        posterior = softmax(-scores)
+        return posterior
+
+
+    def map_node_confidence_prediction(self, nodo, iteracion):
+        """
+        Confidence scores sobre la MAP prediction de la label de un nodo,
+        en una iteracion especificada
+        """
+
+        # tomar la posterior distribution, y la prediccion
+        posterior = self.posterior_dist_label_nodo_iteracion(nodo, iteracion)
+        point_estimate = self.tomar_label_nodo(nodo, iteracion, metodo = "map")
+        assert point_estimate == np.argmax(posterior) # solo confirmar
+
+        # calcular confidence basada en entropia
+        logK = np.log(self.K)
+        entropy = -np.sum(posterior * np.log(posterior + 1e-12))  # evitar log(0)
+        ent_confidence = 1 - entropy/logK
+
+        # devolver
+        resultados = {
+            "Prediction": point_estimate,
+            "Probability": np.max(posterior),
+            "Entropy_Confidence": ent_confidence,
+        }
+        return resultados
+
 
     # ------------------------------------------------------------------
     # ------------------------------------------------------------------
