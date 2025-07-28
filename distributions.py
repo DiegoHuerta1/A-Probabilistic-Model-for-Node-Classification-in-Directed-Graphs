@@ -533,43 +533,43 @@ def analize_zero_truncated_pw(sample, D_max = 1000,
 
         # graficar
         sns.set(style="whitegrid", context="paper", font="serif")
-        fig, ax = plt.subplots(1, 3, figsize=(16, 5))
+        fig, ax = plt.subplots(1, 3, figsize=(17, 6))
 
         # === Panel 1: Frequencies ===
         x_plot = np.arange(0, max(sample) + 1)
         ax[0].bar(valores, frecuencias, label="Observed", color="blue", alpha=0.8)
         ax[0].plot(x_plot, pmf_estimada(x_plot) * n, color="red", label="Expected under H₀", linewidth=2)
-        ax[0].set_title("Frequencies", fontsize=16, fontweight='bold')
-        ax[0].set_xlabel("Value", fontsize=14)
-        ax[0].set_ylabel("Count", fontsize=14)
-        ax[0].tick_params(axis='both', labelsize=12)
-        ax[0].legend(fontsize=11, title_fontsize=12)
+        ax[0].set_title("Frequencies", fontsize=24, fontweight='bold')
+        ax[0].set_xlabel("Value", fontsize=22)
+        ax[0].set_ylabel("Count", fontsize=22)
+        ax[0].tick_params(axis='both', labelsize=20)
+        ax[0].legend(fontsize=18, title_fontsize=20)
 
         # === Panel 2: Frequencies (log scale) ===
         ax[1].plot(x_plot, pmf_estimada(x_plot) * n, color="red", linestyle="-", label="Expected under H₀", linewidth=2)
         ax[1].plot(x_plot, get_ocurrencias_dominio(sample, x_plot), color="blue", linestyle="", marker=".", label="Observed")
         ax[1].set_xscale('log')
         ax[1].set_yscale('log')
-        ax[1].set_title("Frequencies (log scale)", fontsize=16, fontweight='bold')
-        ax[1].set_xlabel("Value (log scale)", fontsize=14)
-        ax[1].set_ylabel("Count (log scale)", fontsize=14)
-        ax[1].tick_params(axis='both', labelsize=12)
-        ax[1].legend(fontsize=11, title_fontsize=12)
+        ax[1].set_title("Frequencies (log scale)", fontsize=24, fontweight='bold')
+        ax[1].set_xlabel("Value (log scale)", fontsize=22)
+        ax[1].set_ylabel("Count (log scale)", fontsize=22)
+        ax[1].tick_params(axis='both', labelsize=20)
+        ax[1].legend(fontsize=18, title_fontsize=20)
 
         # === Panel 3: Data in cells ===
         ax[2].bar(nombres_celdas, observado_celdas, label="Observed", color="blue", alpha=0.8)
         ax[2].plot(nombres_celdas, esperado_celdas, label="Expected under H₀", color="red", marker="o", linestyle="-", linewidth=2)
         ax[2].set_yscale('log')
-        ax[2].set_xlabel("Cells", fontsize=14)
-        ax[2].set_ylabel("Count (log scale)", fontsize=14)
-        ax[2].set_title("Data in Cells", fontsize=16, fontweight='bold')
-        ax[2].tick_params(axis='x', rotation=90, labelsize=11)
-        ax[2].tick_params(axis='y', labelsize=12)
-        ax[2].legend(fontsize=10, title_fontsize=12)
+        ax[2].set_xlabel("Cells", fontsize=22)
+        ax[2].set_ylabel("Count (log scale)", fontsize=22)
+        ax[2].set_title("Data in Cells", fontsize=24, fontweight='bold')
+        ax[2].tick_params(axis='x', rotation=90, labelsize=18)
+        ax[2].tick_params(axis='y', labelsize=20)
+        ax[2].legend(fontsize=18, title_fontsize=20)
 
         plt.tight_layout()
-        # filename = f"plot_{random.randint(10000, 99999)}.jpg"
-        # plt.savefig(filename, bbox_inches="tight", dpi=300)
+        #filename = f"plot_{random.randint(10000, 99999)}.jpg"
+        #plt.savefig(filename, bbox_inches="tight", dpi=300)
         plt.show()
 
     # ----------------------------------------------------------
@@ -900,43 +900,43 @@ def analize_zero_discrete_lognormal(sample, D_max = 1000, initial_point = [0.5, 
 
         # graficar
         sns.set(style="whitegrid", context="paper", font="serif")
-        fig, ax = plt.subplots(1, 3, figsize=(16, 5))
+        fig, ax = plt.subplots(1, 3, figsize=(17, 6))
 
         # === Panel 1: Frequencies ===
         x_plot = np.arange(0, max(sample) + 1)
         ax[0].bar(valores, frecuencias, label="Observed", color="blue", alpha=0.8)
         ax[0].plot(x_plot, pmf_estimada(x_plot) * n, color="red", label="Expected under H₀", linewidth=2)
-        ax[0].set_title("Frequencies", fontsize=16, fontweight='bold')
-        ax[0].set_xlabel("Value", fontsize=14)
-        ax[0].set_ylabel("Count", fontsize=14)
-        ax[0].tick_params(axis='both', labelsize=12)
-        ax[0].legend(fontsize=11, title_fontsize=12)
+        ax[0].set_title("Frequencies", fontsize=24, fontweight='bold')
+        ax[0].set_xlabel("Value", fontsize=22)
+        ax[0].set_ylabel("Count", fontsize=22)
+        ax[0].tick_params(axis='both', labelsize=20)
+        ax[0].legend(fontsize=18, title_fontsize=20)
 
         # === Panel 2: Frequencies (log scale) ===
         ax[1].plot(x_plot, pmf_estimada(x_plot) * n, color="red", linestyle="-", label="Expected under H₀", linewidth=2)
         ax[1].plot(x_plot, get_ocurrencias_dominio(sample, x_plot), color="blue", linestyle="", marker=".", label="Observed")
         ax[1].set_xscale('log')
         ax[1].set_yscale('log')
-        ax[1].set_title("Frequencies (log scale)", fontsize=16, fontweight='bold')
-        ax[1].set_xlabel("Value (log scale)", fontsize=14)
-        ax[1].set_ylabel("Count (log scale)", fontsize=14)
-        ax[1].tick_params(axis='both', labelsize=12)
-        ax[1].legend(fontsize=11, title_fontsize=12)
+        ax[1].set_title("Frequencies (log scale)", fontsize=24, fontweight='bold')
+        ax[1].set_xlabel("Value (log scale)", fontsize=22)
+        ax[1].set_ylabel("Count (log scale)", fontsize=22)
+        ax[1].tick_params(axis='both', labelsize=20)
+        ax[1].legend(fontsize=18, title_fontsize=20)
 
         # === Panel 3: Data in cells ===
         ax[2].bar(nombres_celdas, observado_celdas, label="Observed", color="blue", alpha=0.8)
         ax[2].plot(nombres_celdas, esperado_celdas, label="Expected under H₀", color="red", marker="o", linestyle="-", linewidth=2)
         ax[2].set_yscale('log')
-        ax[2].set_xlabel("Cells", fontsize=14)
-        ax[2].set_ylabel("Count (log scale)", fontsize=14)
-        ax[2].set_title("Data in Cells", fontsize=16, fontweight='bold')
-        ax[2].tick_params(axis='x', rotation=90, labelsize=11)
-        ax[2].tick_params(axis='y', labelsize=12)
-        ax[2].legend(fontsize=11, title_fontsize=12)
+        ax[2].set_xlabel("Cells", fontsize=22)
+        ax[2].set_ylabel("Count (log scale)", fontsize=22)
+        ax[2].set_title("Data in Cells", fontsize=24, fontweight='bold')
+        ax[2].tick_params(axis='x', rotation=90, labelsize=18)
+        ax[2].tick_params(axis='y', labelsize=20)
+        ax[2].legend(fontsize=18, title_fontsize=20)
 
         plt.tight_layout()
-        # filename = f"plot_{random.randint(10000, 99999)}.jpg"
-        # plt.savefig(filename, bbox_inches="tight", dpi=300)
+        #filename = f"plot_{random.randint(10000, 99999)}.jpg"
+        #plt.savefig(filename, bbox_inches="tight", dpi=300)
         plt.show()
 
 
